@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>House Pricing Map - Demo by ZenRows</title>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+
+    <link rel="stylesheet" href="https://www.unpkg.com/tailwindcss@2.1.4/dist/tailwind.min.css" integrity="sha512-2x3sObNVbtxF++/xI9Rj0kqptCr1uNghrcoSzzVnWIkN4OBpP3NqBLR3+ezvzAVOtGKaWiy//TkdDF+SWseCSA==" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/prismjs@1.23.0/themes/prism.css" integrity="sha512-jtWR3pdYjGwfw9df601YF6uGrKdhXV37c+/6VNzNctmrXoO0nkgHcS03BFxfkWycOa2P2Nw9Y9PCT9vjG9jkVg==" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+    <script src="https://unpkg.com/prismjs@1.23.0/prism.js" integrity="sha512-S2+nGI85suJO7CXXZDiu8ygn+SOGUddvdqa2qu04j2D11jSOjWw8sA9n7EDX95J6aZnQImsqDuO/ItqCrwWDCg==" crossorigin=""></script>
+    <script src="static/heatmap.min.js"></script>
+    <script src="static/leaflet-heatmap.js"></script>
+  </head>
+
+  <body>
+    <main class="my-10 lg:my-14 xl:my-16 max-w-6xl mx-auto px-4 sm:px-6">
+      <h1 class="text-3xl tracking-tight leading-tight font-extrabold text-gray-900 sm:text-4xl lg:text-5xl mb-8">House Pricing Map</h1>
+
+      <p class="font-medium my-6 text-xl text-gray-700">
+        This is an example dataset of Houses from Bilbao, Spain. All the info comes directly from a ZenRows task,
+        <a class="hover:text-blue-700 text-blue-600" href="https://app.zenrows.com/register">try it for free</a>.
+      </p>
+
+      <p class="font-medium my-6 text-base text-gray-600">
+        This data was extracted from a well-known real estate website and plugged here with <strong>minimum effort</strong>. The original
+        dataset contains many more fields that were not needed here, so we removed them. But there is no need, you can use the with the
+        original file and the remaining fields will be ignored. See bellow for more info on how to <strong>map your own values</strong>.
+      </p>
+
+      <div id="mapid" style="width: 100%; height: 600px; max-height: 90vh"></div>
+
+      <h2 class="text-xl tracking-tight leading-tight font-extrabold text-gray-900 sm:text-2xl lg:text-3xl my-8 sm:my:12">
+        How does it work
+      </h2>
+
+      <p class="font-medium mt-6 text-base text-gray-600">
+        There are two main parts: <strong>the dataset and a layered map</strong>.<br />
+        The data comes from a separate file: <code>data.jsonp</code>. You can get a different dataset and modifying that file, the
+        <strong>map should adjust automatically</strong>. To get new data you will need at least three values: latitude, longitude and a
+        numeric value that will represent the weight for the heatmap.<br />
+        In this case, the value is price per square meter, but you could use for example mean price for restaurants.
+      </p>
+
+      <pre
+        class="language-javascript"
+      ><code class="language-javascript">// data is defined in the data.jsonp file
+
+dataConfig.dataset =
+// drop your JSON below this line
+[
+    { latitude: 43.25794, longitude: -2.925409, pricePerArea: 2513 },
+    ...
+];</code></pre>
+
+      <pre
+        class="language-javascript"
+      ><code class="language-javascript">// variable names for the dataset are defined in the leaflet.html file
+
+var dataConfig = {
+    latitudeField: 'latitude',
+    longitudeField: 'longitude',
+    valueField: 'pricePerArea',
+};</code></pre>
+
+      <p class="font-medium mt-8 text-base text-gray-600">
+        The other part, the map, should not be modified even after data changes.<br />
+        Just to understand how it works, we are using Leaflet and OpenStreetMap for the map, and heatmap.js for, well, the heatmap.
+      </p>
+      <p class="font-medium mt-2 text-base text-gray-600">
+        First, create a map with tiles from OpenStreetMap and fit the bounds with all the items from the dataset, so even if we set the
+        center and zoom, those will overwritten.
+      </p>
+      <pre class="language-javascript"><code class="language-javascript">var map = L.map('mapid').setView([43.2633534, -2.939574], 14);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { ... }).addTo(map);
+
+var bounds = dataConfig.dataset.map(item => [item.latitude, item.longitude]);
+map.fitBounds(bounds);</code></pre>
+
+      <p class="font-medium mt-6 text-base text-gray-600">
+        Then, define heatmap config object to create the heatmap overlay, which we add to the map.
+      </p>
+      <pre class="language-javascript"><code class="language-javascript">var heatmapConfig = { radius: 15, ... };
+var heatmapLayer = new HeatmapOverlay(heatmapConfig);
+map.addLayer(heatmapLayer);</code></pre>
+
+      <p class="font-medium mt-6 text-base text-gray-600">
+        And finally, we generate the object with the dataset and pass it to the overlay.
+      </p>
+      <pre class="language-javascript"><code class="language-javascript">var heatmapData = { data: dataConfig.dataset, ... };
+heatmapLayer.setData(heatmapData);</code></pre>
+
+      <p class="font-medium mt-10 text-base text-gray-600 sm:mt-16">
+        Created using <a class="hover:text-blue-700 text-blue-600" href="https://leafletjs.com">Leaflet</a>,
+        <a class="hover:text-blue-700 text-blue-600" href="https://www.patrick-wied.at/static/heatmapjs">heatmap.js</a> and
+        <a class="hover:text-blue-700 text-blue-600" href="https://www.openstreetmap.org">OpenStreetMap</a>. Thanks to all of them for
+        working hard on open-source. 🙏
+      </p>
+    </main>
+
+    <footer>
+      <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="md:flex md:items-center md:justify-between py-4 md:py-8 border-t border-gray-200">
+          <div class="text-sm text-gray-600 mr-4">© 2021 ZenRows, Inc. All rights reserved.</div>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      var dataConfig = {
+        latitudeField: 'latitude',
+        longitudeField: 'longitude',
+        valueField: 'pricePerArea',
+      };
+
+      document.addEventListener('DOMContentLoaded', () => {
+        if (!window.dataConfig || !Array.isArray(dataConfig.dataset)) {
+          console.error('Please review you data.jsonp file');
+          return;
+        }
+
+        var map = L.map('mapid').setView([43.2633534, -2.939574], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 16,
+          minZoom: 14,
+        }).addTo(map);
+
+        var bounds = dataConfig.dataset.map(item => [item.latitude, item.longitude]);
+        map.fitBounds(bounds);
+
+        var heatmapConfig = {
+          radius: 15,
+          maxOpacity: 0.7,
+          scaleRadius: false,
+          useLocalExtrema: true,
+
+          latField: dataConfig.latitudeField || 'latitude',
+          lngField: dataConfig.longitudeField || 'longitude',
+          valueField: dataConfig.valueField || 'pricePerArea',
+        };
+
+        var heatmapLayer = new HeatmapOverlay(heatmapConfig);
+        map.addLayer(heatmapLayer);
+
+        var max = Math.max(...dataConfig.dataset.map(item => item.pricePerArea));
+        var heatmapData = {
+          max: max,
+          data: dataConfig.dataset,
+        };
+        heatmapLayer.setData(heatmapData);
+      });
+    </script>
+    <script src="data.jsonp"></script>
+  </body>
+</html>
